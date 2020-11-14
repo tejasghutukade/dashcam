@@ -1,0 +1,31 @@
+import pysftp
+import os
+
+myHostname = "10.130.247.140"
+myUsername = "pi"
+myPassword = "aatracking"
+
+myfiles= os.listdir("./")
+
+
+if os.path.exists('./video_1601221500s.h264'):
+    print("file exist")
+else:
+    print("file doesn not exist")
+
+# for y in range(10):
+#     for i in range(10):    
+#         if(i == 5):
+#             print("5 found breaking now")
+#             break
+#         print(i)
+with pysftp.Connection(host=myHostname,username=myUsername,password=myPassword) as sftp:
+    
+    for _file in myfiles:
+        if(".h264" in _file):
+            print(_file)
+            remoteFilepath = '../../media/pi/aatstorage/'+ _file
+            localFilepath = _file
+            #sftp.put(localFilepath,remoteFilepath)
+            #print("uploaded file -" + _file)                                
+    
