@@ -18,7 +18,7 @@ dataLogFile = 'dataLog.json'
 lengthOfVideo = 60
 frameRate = 30
 
-myHostname = "10.130.247.140"
+myHostname = "10.124.57.139"
 myUsername = "pi"
 myPassword = "aatracking"
 
@@ -39,11 +39,12 @@ class AatDashCam:
         GPIO.setup(18,GPIO.OUT,initial = GPIO.HIGH) # HiGH for keeping the power ON
         GPIO.setup(24,GPIO.OUT,initial = GPIO.HIGH) # HIGH for LED to imdicate processing
         self.ignitionStatus = GPIO.input(17)
-
+        self.ledON = True
         #Initialize camera
         self.camera = PiCamera()
         self.initDataLogFile()
         self.lengthOfVideo = 60 #in seconds
+        print('Init Successfull')
 
     def intiCameraConfiguration(self):
         with open('/home/pi/cameraProject/cameraConfig.json') as json_file:
@@ -147,6 +148,14 @@ class AatDashCam:
             GPIO.cleanup()            
             #subprocess.call('sudo shutdown' , shell=True)
 
+    def uploadCallback(self,a,b):
+        print("\r"+str(b/1000000)+" MB " + " - " + str(a/1000000)+" MB" ,end='', flush=True)
+        if self.ledON:
+            GPIO.output(24,GPIO.LOW)
+            self.ledON = False
+        else:
+            GPIO.output(24,GPIO.HIGH)
+            self.ledON = True        
 
     def startUploading(self):
         print("u have 5 seconds to turn on the ignition")
@@ -166,16 +175,29 @@ class AatDashCam:
             else:
                 break
         if (response==True) :
-            with pysftp.Connection(host=myHostname,username=myUsername,password=myPassword) as sftp:
+            time.sleep(2)
+            command = "sudo nslookup aatuploadserver | tail -2 | head -1 | awk '{print $2}'"
+            result = os.popen(command)
+
+            ipaddress = list(result)
+            print(ipaddress)
+            if ipaddress:
+                myHostname = str(ipaddress[0].strip())
+                print(myHostname)
+            
+            cnopts = pysftp.CnOpts()
+            cnopts.hostkeys = None
+            print("**************************** hostkeys none")
+            with pysftp.Connection(host=myHostname,username=myUsername,password=myPassword,cnopts=cnopts) as sftp:
                 myfiles= os.listdir("./")
                 for __file in myfiles:            
                     if(".h264" in __file):
                         print(__file)
                         remoteFilepath = mediaStorageLocation + __file
                         localFilepath = __file
-                        sftp.put(localFilepath,remoteFilepath)
+                        sftp.put(localFilepath,remoteFilepath,self.uploadCallback)
                         os.remove(__file)
-                        print("uploaded file -" + __file)
+                        print("\nuploaded file -" + __file)
 
                 sftp.close()
                 
