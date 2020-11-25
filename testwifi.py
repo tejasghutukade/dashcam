@@ -1,5 +1,6 @@
 
 import time
+import os
 from wifiConnect import Finder
 
 
@@ -9,6 +10,8 @@ if __name__ == "__main__":
     server_name = "OakOne"
     password = "ganesha2301"
     interface_name = "wlan0" # i. e wlp2s0  
+    
+   
     F = Finder(server_name=server_name,
                password=password,
                interface=interface_name)

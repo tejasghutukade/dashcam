@@ -45,7 +45,7 @@ def uploadFiles():
             response = F.run()
         else:
             break
-
+    print("**************************** did come here")
     if (response==True) : 
         print("Starting Upload")
         a_file = open(dataLogFile, "r") # read dataLog File
@@ -53,8 +53,10 @@ def uploadFiles():
         a_file.close()
         videoFiles = json_object['videoFiles']
         _videoFiles = videoFiles
-        
-        with pysftp.Connection(host=myHostname,username=myUsername,password=myPassword) as sftp:
+        cnopts = pysftp.CnOpts()
+        cnopts.hostkeys = None
+        print("**************************** hostkeys none")
+        with pysftp.Connection(host=myHostname,username=myUsername,password=myPassword,cnopts=cnopts) as sftp:
             cnt = 0
             for _file in videoFiles:
                 if os.path.exists(_file):

@@ -1,6 +1,13 @@
 import pysftp
 import os
 
+command = "sudo nslookup aatuploadserver | tail -2 | head -1 | awk '{print $2}'"
+result = os.popen(command)
+
+ipaddress = list(result)
+if ipaddress:
+    print(ipaddress[0].strip())
+
 myHostname = "10.130.247.140"
 myUsername = "pi"
 myPassword = "aatracking"
@@ -19,8 +26,10 @@ else:
 #             print("5 found breaking now")
 #             break
 #         print(i)
-with pysftp.Connection(host=myHostname,username=myUsername,password=myPassword) as sftp:
-    
+cnopts = pysftp.CnOpts()
+cnopts.hostkeys = None
+with pysftp.Connection(host=myHostname,username=myUsername,password=myPassword,cnopts=cnopts) as sftp:
+
     for _file in myfiles:
         if(".h264" in _file):
             print(_file)
