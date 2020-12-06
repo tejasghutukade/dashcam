@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+import json
 
 class Finder:
     def __init__(self, *args, **kwargs):
@@ -6,8 +8,9 @@ class Finder:
         self.password = kwargs['password']
         self.interface_name = kwargs['interface']
         self.main_dict = {}
-        self.skip = False
-        print("Trying to connect to wifi - " + self.server_name)
+        self.skip = False        
+        
+
                     
     def run(self):
         
@@ -53,3 +56,35 @@ class Finder:
             raise
         else:
             return True
+
+    def searchForavailableWIFI(self,server_name):
+        process  = os.popen("sudo iw dev wlan0 scan | grep SSID")
+        preprocessed = process.read()        
+        if(server_name in preprocessed):            
+            return False
+        else:        
+            return True
+
+if __name__ == "__main__":
+    home = str(Path.home())    
+    if(os.path.exists(home+ '/cameraProject/wifiConfig.json')):
+        with open(home+'/cameraProject/wifiConfig.json','rb') as json_file:
+            config = json.load(json_file)
+            settings = config["settings"]      
+            interface_name = "wlan0" # i. e wlp2s0        
+            if settings:
+                for setting in settings:                    
+                    server_name = setting["servername"]
+                    password = setting["password"]
+                    F = Finder(server_name=server_name,password=password,interface=interface_name)
+                    check = F.searchForavailableWIFI(server_name=server_name)
+                    print(str(check))
+                    if not check:
+                        print(server_name + " WIFI found")
+                        break
+                    else:
+                        print(server_name + " wifi not found")
+
+    else:
+        print("file doesnt exist")
+    
