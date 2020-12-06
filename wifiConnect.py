@@ -7,7 +7,8 @@ class Finder:
         self.interface_name = kwargs['interface']
         self.main_dict = {}
         self.skip = False
-
+        print("Trying to connect to wifi - " + self.server_name)
+                    
     def run(self):
         
         checkCommand = "iwgetid -r"

@@ -10,15 +10,13 @@ import subprocess
 import pysftp
 from wifiConnect import Finder
 
-subprocess.call('sudo systemctl stop gpsd.socket' , shell=True)
-subprocess.call('sudo gpsd /dev/serial0 -F /var/run/gpsd.sock',shell=True)
 
 dataLogFile = 'dataLog.json'
 
 lengthOfVideo = 60
 frameRate = 30
 
-myHostname = "10.124.57.139"
+myHostname = "192.168.10.188"
 myUsername = "pi"
 myPassword = "aatracking"
 
@@ -45,10 +43,13 @@ class AatDashCam:
         self.initDataLogFile()
         self.lengthOfVideo = 60 #in seconds
         print('Init Successfull')
+        
 
     def intiCameraConfiguration(self):
         with open('/home/pi/cameraProject/cameraConfig.json') as json_file:
+            print(json_file)
             config = json.load(json_file)
+            
             self.camera.resolution = (config['resolution']['x'],config['resolution']['y'])
             self.lengthOfVideo = config['interval'] * 60
             frameRate = config['framerate']
@@ -99,22 +100,37 @@ class AatDashCam:
         return filename
 
     def getPositionData(self):
-        nx = self.gpsd.next()    
-        position = ""
-        # For a list of all supported classes and fields refer to:
-        # https://gpsd.gitlab.io/gpsd/gpsd_json.html        
-        if nx['class'] == 'TPV':
-            latitude = getattr(nx,'lat', "Unknown")
-            longitude = getattr(nx,'lon', "Unknown")
-            speed = getattr(nx,'speed',"Unknown")
-            time = getattr(nx,'time',"Unknown")
-            alt = getattr(nx,'alt',"Unknown")
-            position = "Your position: lon = " + str(longitude) + ", lat = " + str(latitude)+", speed ="+ str(speed) + ", time = " + str(time) + ", alt = " + str(alt)
-            print(position)
-        return position
+        try:
+            nx = self.gpsd.next()    
+            position = ""
+            # For a list of all supported classes and fields refer to:
+            # https://gpsd.gitlab.io/gpsd/gpsd_json.html        
+            if nx['class'] == 'TPV':
+                latitude = getattr(nx,'lat', "Unknown")
+                longitude = getattr(nx,'lon', "Unknown")
+                speed = getattr(nx,'speed',"Unknown")
+                time = getattr(nx,'time',"Unknown")
+                alt = getattr(nx,'alt',"Unknown")
+                position = "Your position: lon = " + str(longitude) + ", lat = " + str(latitude)+", speed ="+ str(speed) + ", time = " + str(time) + ", alt = " + str(alt)
+                print(position)
+            return position
+        except BaseException  as e:
+            print(str(e))
+            subprocess.call('sudo systemctl stop gpsd.socket', shell=True)
+            subprocess.call('sudo gpsd /dev/serial0 -F /var/run/gpsd.sock',shell=True)
+            gpsd = gps(mode=WATCH_ENABLE|WATCH_NEWSTYLE)
+            self.gpsd = gpsd
+            print("re initilizing socket")
+            return ""
 
     def run(self):
         try:
+            #pos = self.getPositionData()
+            #for i in range(100):
+            #    print(str(pos))
+            #    pos = self.getPositionData()
+            #    time.sleep(1)
+                
             if(self.ignitionStatus):
                 while self.ignitionStatus:
                     self.ignitionStatus = GPIO.input(17) # Check for ignition            
@@ -139,8 +155,8 @@ class AatDashCam:
                     self.camera.stop_recording()
                     print(str(self.ignitionStatus))
 
-                isUploaded = self.startUploading()
-                    
+            isUploaded = self.startUploading()
+            GPIO.output(18,GPIO.LOW)
         except Exception  as e:
             print(e)
         finally:
@@ -157,12 +173,30 @@ class AatDashCam:
             GPIO.output(24,GPIO.HIGH)
             self.ledON = True        
 
+    def searchForavailableWIFI(self,server_name):
+        process  = os.popen("sudo iw dev wlan0 scan | grep SSID")
+        preprocessed = process.read()
+        print(preprocessed)
+        if(server_name in preprocessed):
+            print(server_name +" wifi found")
+            return False
+        else:
+            print(server_name + " Wifi not found")
+            return True
+
     def startUploading(self):
         print("u have 5 seconds to turn on the ignition")
         time.sleep(5)
-        server_name = "OakOne"
-        password = "ganesha2301"
+
         interface_name = "wlan0" # i. e wlp2s0  
+        server_name = "COMFAST_2G"
+        password = "Martin123"
+        checkwifi = self.searchForavailableWIFI(server_name)
+        time.sleep(2)
+        if checkwifi : 
+            server_name = "COMFAST_5G"
+            password = "Martin123"
+
         F = Finder(server_name=server_name,password=password,interface=interface_name)
         response = F.run()
         counter = 0
@@ -178,27 +212,29 @@ class AatDashCam:
             time.sleep(2)
             command = "sudo nslookup aatuploadserver | tail -2 | head -1 | awk '{print $2}'"
             result = os.popen(command)
-
             ipaddress = list(result)
             print(ipaddress)
             if ipaddress:
-                myHostname = str(ipaddress[0].strip())
+                #myHostname = str(ipaddress[0].strip())
                 print(myHostname)
+           
             
             cnopts = pysftp.CnOpts()
             cnopts.hostkeys = None
             print("**************************** hostkeys none")
             with pysftp.Connection(host=myHostname,username=myUsername,password=myPassword,cnopts=cnopts) as sftp:
-                myfiles= os.listdir("./")
+                print("=========================> pysftp connection successfull")
+                myfiles= os.listdir("./home/pi/cameraProject/")
                 for __file in myfiles:            
+                    print(__file)
                     if(".h264" in __file):
                         print(__file)
                         remoteFilepath = mediaStorageLocation + __file
-                        localFilepath = __file
+                        localFilepath = "./home/pi/cameraProject/"+ __file
                         sftp.put(localFilepath,remoteFilepath,self.uploadCallback)
-                        os.remove(__file)
+                        os.remove("./home/pi/cameraProject/"+__file)
                         print("\nuploaded file -" + __file)
-
+                print("file upload successfull")
                 sftp.close()
                 
             return True
@@ -207,5 +243,10 @@ class AatDashCam:
 
 
 if __name__ == "__main__":
+    p1 = subprocess.Popen('sudo systemctl stop gpsd.socket' ,stdout=subprocess.PIPE, shell=True)
+    p1.wait()
+    p2 = subprocess.Popen('sudo gpsd /dev/serial0 -F /var/run/gpsd.sock',stdout=subprocess.PIPE,shell=True)
+    p2.wait()
+
     aat = AatDashCam()
     aat.run()
