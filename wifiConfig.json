@@ -1,20 +1,20 @@
 {
-    "settings":[
+    "settings": [
         {
-            "servername":"OakOne",
-            "password":"gaenesha2301"
+            "servername": "OakOne_2GEXT",
+            "password": "gaenesha2301"
         },
         {
-            "servername":"COMFAST_2G",
-            "password" :"Martin23"          
+            "servername": "COMFAST_2G",
+            "password": "Martin23"
         },
         {
-            "servername":"COMFAST_5G",
-            "password" :"Martin23"          
+            "servername": "COMFAST_5G",
+            "password": "Martin23"
         },
         {
-            "servername":"WHE-BELL",
-            "password":"Martin23"
+            "servername": "WHE-BELL",
+            "password": "Martin23"
         }
     ]
 }
