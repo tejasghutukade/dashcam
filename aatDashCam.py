@@ -147,13 +147,70 @@ class AatDashCam:
             GPIO.output(24, GPIO.HIGH)
             self.ledON = True
 
+    def startUploadingDebug(self):
+        print("u have 5 seconds to turn on the ignition")
+        time.sleep(5)
+
+        interface_name = "wlan0"  # i. e wlp2s0
+        server_name = "WHE-BELL"
+        password = "Martin123"
+        F = Finder(server_name=server_name, password=password,
+                   interface=interface_name)
+        response = F.run()
+        counter = 0
+        while (response == False):
+            counter += 1
+            self.ignitionStatus = GPIO.input(17)
+            if self.ignitionStatus:
+                break
+
+            if(counter < 30):
+                time.sleep(2)
+                print('waiting for a second to try again')
+                response = F.run()
+            else:
+                break
+
+        if (response == True):
+            time.sleep(10)
+
+            cnopts = pysftp.CnOpts()
+            cnopts.hostkeys = None
+            print("**************************** hostkeys none")
+            with pysftp.Connection(host=myHostname, username=myUsername, password=myPassword, cnopts=cnopts) as sftp:
+                print("=========================> pysftp connection successfull")
+                myfiles = os.listdir(self.home)
+                for __file in myfiles:                    
+                    if(".h264" in __file):
+                        print(__file)                        
+                        remoteFilepath = mediaStorageLocation + __file
+                        localFilepath = self.home + __file
+                        sftp.put(localFilepath, remoteFilepath,
+                                 self.uploadCallback)
+
+                        #self.ignitionStatus = GPIO.input(17)
+                        #if self.ignitionStatus:
+                        #    break
+
+                        os.remove(self.home+__file)
+                        print("\nuploaded file -" + __file)
+                        
+                print("file upload successfull")
+                sftp.close()
+                self.processStarted = False
+                print("this is a good time to turn on the ignition")
+                time.sleep(10)
+            return True
+        else:
+            return False
+    
     def startUploading(self):
         print("u have 5 seconds to turn on the ignition")
         time.sleep(5)
 
         interface_name = "wlan0"  # i. e wlp2s0
-        server_name = "OakOne_2GEXT"
-        password = "ganesha2301"
+        server_name = "WHE-BELL"
+        password = "Martin123"
         F = Finder(server_name=server_name, password=password,
                    interface=interface_name)
         response = F.run()
@@ -172,7 +229,7 @@ class AatDashCam:
                 break
 
         if (response == True and self.ignitionStatus == False):
-            time.sleep(2)
+            time.sleep(10)
 
             cnopts = pysftp.CnOpts()
             cnopts.hostkeys = None
@@ -180,22 +237,21 @@ class AatDashCam:
             with pysftp.Connection(host=myHostname, username=myUsername, password=myPassword, cnopts=cnopts) as sftp:
                 print("=========================> pysftp connection successfull")
                 myfiles = os.listdir(self.home)
-                for __file in myfiles:
-                    print(__file)
+                for __file in myfiles:                    
                     if(".h264" in __file):
-                        print(__file)
-
+                        print(__file)                        
                         remoteFilepath = mediaStorageLocation + __file
                         localFilepath = self.home + __file
                         sftp.put(localFilepath, remoteFilepath,
                                  self.uploadCallback)
 
-                        self.ignitionStatus = GPIO.input(17)
-                        if self.ignitionStatus:
-                            break
+                        #self.ignitionStatus = GPIO.input(17)
+                        #if self.ignitionStatus:
+                        #    break
 
                         os.remove(self.home+__file)
                         print("\nuploaded file -" + __file)
+                        
                 print("file upload successfull")
                 sftp.close()
                 self.processStarted = False
@@ -204,7 +260,46 @@ class AatDashCam:
             return True
         else:
             return False
+    
+    def runDebug(self):
+        try:
+            self.ignitionStatus = GPIO.input(17)  # Check for ignition
+            if(self.ignitionStatus):
+                self.intiCameraConfiguration()
+                self.ignitionStatus = GPIO.input(
+                        17)  # Check for ignition
+                print("Ignition Status" + str(self.ignitionStatus))
+                filename = self.getFilename()
+                self.camera.start_preview(alpha=200)
+                self.camera.start_recording(filename)
+                now = datetime.datetime.now()
+                self.camera.annotate_text = now.strftime(
+                    '%Y-%m-%dT%H:%M:%S')
+                print(str(self.lengthOfVideo))
+                for i in range(self.lengthOfVideo):
+                    position = self.getPositionData()
+                    now = datetime.datetime.now()
+                    self.camera.annotate_text = now.strftime(
+                        '%Y-%m-%dT%H:%M:%S') + " " + position
+                    time.sleep(1)
+                    self.ignitionStatus = GPIO.input(
+                        17)  # Check for ignition
+                    if(self.ignitionStatus == False):
+                        break
 
+                self.camera.stop_preview()
+                self.camera.stop_recording()    
+
+            isUploaded = self.startUploadingDebug()
+            print(" is Uploaded folag " + str(isUploaded))    
+
+            GPIO.output(18, GPIO.LOW)
+        except Exception as e:
+            print(e)
+        finally:
+            print("clean up")
+            GPIO.cleanup()
+    
     def run(self):
         try:
             #pos = self.getPositionData()
@@ -263,4 +358,4 @@ if __name__ == "__main__":
     p2.wait()
 
     aat = AatDashCam()
-    aat.run()
+    aat.runDebug()

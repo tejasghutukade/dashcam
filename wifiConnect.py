@@ -1,7 +1,8 @@
 import os
+import subprocess
 from pathlib import Path
 import json
-
+import time
 
 class Finder:
     def __init__(self, *args, **kwargs):
@@ -57,7 +58,17 @@ class Finder:
 
             for name in ssid_list:
                 try:
-                    result = self.connection(name)
+                    result = self.connect(name)
+                    check = self.searchForavailableWIFI(server_name="WHE-BELL")
+                    count = 0
+                    while check == False:
+                        result = self.connect(name)
+                        count = count + 1
+                        time.sleep(5)
+                        check = self.searchForavailableWIFI(server_name="WHE-BELL")
+                        if count == 5:
+                            break
+                        
                     return result
                 except Exception as exp:
                     print("Couldn't connect to name : {}. {}".format(name, exp))
@@ -79,7 +90,36 @@ class Finder:
             raise
         else:
             return True
-
+    def connect(self,name):
+        try:
+            p1 = subprocess.Popen("sudo systemctl stop dnsmasq", shell=True)
+            p1.wait()
+            print("stop dnsmasq")
+            #time.sleep(2)
+            p2 = subprocess.Popen("sudo systemctl stop hostapd", shell=True)
+            p2.wait()
+            print("stop hostapd")
+            #time.sleep(2)
+            p3 = subprocess.Popen("sudo dhclient -r", shell=True)
+            p3.wait()
+            print("stop dhclient -r")
+            #time.sleep(2)
+            p4 = subprocess.Popen("sudo systemctl restart dhcpcd", shell=True)
+            p4.wait()
+            print("stop restart dhcpcd")
+            time.sleep(2)
+            print("sudo wpa_supplicant -B -i wlan0 -c wpa_supplicant_WHE-BELL.conf")
+            p5 = subprocess.Popen("sudo wpa_supplicant -B -i wlan0 -c wpa_supplicant_WHE-BELL.conf", shell=True)
+            p5.wait()
+            time.sleep(5)
+            print("stop connect wpasupplicant")
+            return True
+        except:
+            raise
+        else:
+            return False
+    
+    
     def searchForavailableWIFI(self, server_name):
         process = os.popen("sudo iw dev wlan0 scan | grep SSID")
         preprocessed = process.read()
