@@ -34,6 +34,7 @@ class AatDashCam:
         # Inititalize GPS
         gpsd = gps(mode=WATCH_ENABLE | WATCH_NEWSTYLE)
         self.gpsd = gpsd
+        
         # Fetch Intial Storage
         self.storageLeft = self.getStorageleft()
 
@@ -209,8 +210,8 @@ class AatDashCam:
         time.sleep(5)
 
         interface_name = "wlan0"  # i. e wlp2s0
-        server_name = "WHE-BELL"
-        password = "Martin123"
+        server_name = "OakOne"
+        password = "ganesha2301"
         F = Finder(server_name=server_name, password=password,
                    interface=interface_name)
         response = F.run()
@@ -221,11 +222,12 @@ class AatDashCam:
             if self.ignitionStatus:
                 break
 
-            if(counter < 30):
+            if(counter < 10):
                 time.sleep(2)
-                print('waiting for a second to try again')
+                print('waiting for a second to try again - ' + str(counter))
                 response = F.run()
             else:
+                print("breaking here")
                 break
 
         if (response == True and self.ignitionStatus == False):
@@ -338,7 +340,8 @@ class AatDashCam:
                         self.camera.stop_recording()
 
                 isUploaded = self.startUploading()
-                print(" is Uploaded folag " + str(isUploaded))
+                self.processStarted = False
+                print(" is Uploaded flag " + str(isUploaded))
 
             GPIO.output(18, GPIO.LOW)
         except Exception as e:
@@ -358,4 +361,4 @@ if __name__ == "__main__":
     p2.wait()
 
     aat = AatDashCam()
-    aat.runDebug()
+    aat.run()

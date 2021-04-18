@@ -14,6 +14,7 @@ class Finder:
         self.password = kwargs['password']
         self.interface_name = kwargs['interface']
         check = self.searchForavailableWIFI(server_name=self.server_name)
+        self.isAlreadyConnected = False
         if check:
             if(os.path.exists(self.home + 'wifiConfig.json')):
                 with open(self.home+'wifiConfig.json', 'rb') as json_file:
@@ -33,9 +34,13 @@ class Finder:
                             else:
                                 print(server_name + " wifi not found")
         else:
+            self.isAlreadyConnected = True
             print("already connected to " + self.server_name)
 
     def run(self):
+        if self.isAlreadyConnected:
+            return self.isAlreadyConnected
+        
         checkCommand = "iwgetid -r"
         checkResult = os.popen(checkCommand)
         checkResult = list(checkResult)
@@ -59,13 +64,13 @@ class Finder:
             for name in ssid_list:
                 try:
                     result = self.connect(name)
-                    check = self.searchForavailableWIFI(server_name="WHE-BELL")
+                    check = self.searchForavailableWIFI(server_name="Oak560")
                     count = 0
                     while check == False:
                         result = self.connect(name)
                         count = count + 1
                         time.sleep(5)
-                        check = self.searchForavailableWIFI(server_name="WHE-BELL")
+                        check = self.searchForavailableWIFI(server_name="Oak560")
                         if count == 5:
                             break
                         
@@ -108,8 +113,8 @@ class Finder:
             p4.wait()
             print("stop restart dhcpcd")
             time.sleep(2)
-            print("sudo wpa_supplicant -B -i wlan0 -c wpa_supplicant_WHE-BELL.conf")
-            p5 = subprocess.Popen("sudo wpa_supplicant -B -i wlan0 -c wpa_supplicant_WHE-BELL.conf", shell=True)
+            print("sudo wpa_supplicant -B -i wlan0 -c wpa_supplicant_OakOne.conf")
+            p5 = subprocess.Popen("sudo wpa_supplicant -B -i wlan0 -c wpa_supplicant_OakOne.conf", shell=True)
             p5.wait()
             time.sleep(5)
             print("stop connect wpasupplicant")
